@@ -88,10 +88,93 @@ namespace migracioRedmine
                 Tuple<string, string> ids = new Tuple<string, string>(oprg.id, await Api.PostProject(oprg, tIds));
                 tIds.Add(ids);
                 tw.WriteLine(ids.Item1 + " " + ids.Item2);
-                InsertIdProject(ids.Item2, ids.Item1);
+                if (ids.Item2 != "error")
+                {
+                    InsertIdProject(ids.Item2, ids.Item1);
+                }
             }
             tw.Close();
             MessageBox.Show("ProjectsCreated");
+
+        }
+        public async System.Threading.Tasks.Task SelectIssueAsync()
+        {
+            List<Project> pList = new List<Project>();
+            pList = ListProjects();
+
+            List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+            TextWriter tw = new StreamWriter("Issues.txt");
+            foreach (Project oprg in pList)
+            {
+                Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
+                tIds.Add(ids);
+                List<Issue> iList = new List<Issue>();
+                iList = ListIssue(ids.Item1, ids.Item2);
+                tw.WriteLine(ids.Item1 + " " + ids.Item2);
+
+                foreach (Issue i in iList)
+                {
+                    List<Attachments> aList = new List<Attachments>();
+                    aList = SelectAttachments(i.id);
+
+                    if (aList != null)
+                    {
+                        int index = 0;
+                        uploads uploads = new uploads();
+                        uploads.type = "array";
+                        uploads.upload = new upload[aList.Count];
+                        foreach (Attachments a in aList)
+                        {
+                            AttachToken token = await Api.PostUpload(a);
+                            upload upload = new upload();
+                            upload.token = token.token;
+                            upload.filename = a.filename;
+                            upload.content_type = a.content_type;
+                            uploads.upload[index] = upload;
+                            i.uploads = uploads;
+                            index++;
+                        }
+                    }
+                    Issue returned = await Api.PostIssue(i);
+                    InsertIdIssue(returned.id, i.id);
+                    tw.WriteLine("   " + returned.subject);
+                }
+            }
+
+            MessageBox.Show("Issue Done");
+        }
+
+        public async System.Threading.Tasks.Task SelectTimeAsync()
+        {
+            List<Project> pList = new List<Project>();
+            pList = ListProjects();
+
+            List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+            TextWriter tw = new StreamWriter("Time.txt");
+            foreach (Project oprg in pList)
+            {
+                Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
+                tIds.Add(ids);
+                List<Issue> iList = new List<Issue>();
+                iList = ListIssue(ids.Item1, ids.Item2);
+                tw.WriteLine(ids.Item1 + " " + ids.Item2);
+
+                foreach (Issue i in iList)
+                {
+                    tw.WriteLine("   " + i.subject);
+
+                    List<TimeEntries> tList = new List<TimeEntries>();
+                    tList = ListTimeEntries(i.id, ListIdIssue(i.id), i.project_id);
+
+                    foreach (TimeEntries Time in tList)
+                    {
+                        string returnedTime = await Api.PostTimeEntry(Time);
+                        tw.WriteLine("        " + returnedTime);
+                    }
+                }
+            }
+
+            MessageBox.Show("Done");
 
         }
 
@@ -117,7 +200,7 @@ namespace migracioRedmine
 
         public List<Project> ListProjects()
         {
-            string query = "SELECT * FROM projects WHERE id<100";
+            string query = "SELECT * FROM projects WHERE id<120";
 
             //Open connection
             if (this.OpenConnection() == true)
@@ -154,6 +237,207 @@ namespace migracioRedmine
                 return null;
             }
         }
+        public string ListIdProjects(string id)
+        {
+            string query = "SELECT * FROM projects WHERE id="+id;
+
+            //Open connection
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                //Read the data and store them in the list
+                string new_id = null;
+                while (dataReader.Read())
+                {
+                    new_id = dataReader["default_assigned_to_id"].ToString();
+                }
+
+                dataReader.Close();
+                this.CloseConnection();
+                return new_id;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+
+        public List<Issue> ListIssue(string id, string new_id)
+        {
+            string query = "SELECT * FROM issues WHERE project_id=" + id;
+
+            //Open connection
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                List<Issue> iList = new List<Issue>();
+                //Read the data and store them in the list
+                while (dataReader.Read())
+                {
+                    Issue issue = new Issue();
+                    issue = ReadDB.ReadDBIssue(dataReader);
+                    issue.project_id = new_id;
+                    issue.priority_id = "12";
+                    issue.author_id = "5";
+                    if (issue != null)
+                    {
+                        iList.Add(issue);
+                    }
+                }
+                dataReader.Close();
+                this.CloseConnection();
+
+                return iList;
+            }
+            else
+            {
+                return null;
+            }
+
+        }
+        public bool InsertIdIssue(string new_id, string old_id)
+        {
+            string query = "update issues set fixed_version_id = " + new_id + " where id = " + old_id;
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+
+                cmd.ExecuteNonQuery();
+                this.CloseConnection();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
+        }
+        public string ListIdIssue(string id)
+        {
+            string query = "SELECT * FROM issues WHERE id=" + id;
+
+            //Open connection
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                //Read the data and store them in the list
+                string new_id = null;
+                while (dataReader.Read())
+                {
+                    new_id = dataReader["fixed_version_id"].ToString();
+                }
+
+                dataReader.Close();
+                this.CloseConnection();
+                return new_id;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public List<Attachments> SelectAttachments(string issue_id)
+        {
+            string query = "SELECT * FROM attachments WHERE container_type='Issue' and container_id=" + issue_id;
+
+
+            //Open connection
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                List<Attachments> file = new List<Attachments>();
+                //Read the data and store them in the list
+                while (dataReader.Read())
+                {
+                    Attachments att = new Attachments();
+                    att.id = dataReader["id"].ToString();
+                    att.container_id = dataReader["container_id"].ToString();
+                    att.container_type = dataReader["container_type"].ToString();
+                    att.filename = dataReader["filename"].ToString();
+                    att.disk_filename = dataReader["disk_filename"].ToString();
+                    att.filesize = dataReader["filesize"].ToString();
+                    att.content_type = dataReader["content_type"].ToString();
+                    att.digest = dataReader["digest"].ToString();
+                    att.downloads = dataReader["downloads"].ToString();
+                    att.author_id = dataReader["author_id"].ToString();
+                    att.created_on = dataReader["created_on"].ToString();
+                    att.description = dataReader["description"].ToString();
+                    att.disk_directory = dataReader["disk_directory"].ToString();
+
+                    if (att != null)
+                    {
+                        file.Add(att);
+                    }
+                }
+
+                //close Data Reader
+                dataReader.Close();
+
+                //close Connection
+                this.CloseConnection();
+
+                //return list to be displayed
+                return file;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public List<TimeEntries> ListTimeEntries(string issue_id, string new_id, string project_id)
+        {
+            string query = "SELECT * FROM time_entries WHERE issue_id=" + issue_id;
+
+            //Open connection
+            if (this.OpenConnection() == true)
+            {
+                //Create Command
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                //Create a data reader and Execute the command
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                List<TimeEntries> tList = new List<TimeEntries>();
+
+                while (dataReader.Read())
+                {
+                    TimeEntries tEntry = new TimeEntries();
+                    tEntry.hours = dataReader["hours"].ToString();                 
+                    tEntry.issue_id = new_id;
+                    if (tEntry != null)
+                    {
+                        tList.Add(tEntry);
+                    }
+                }
+                dataReader.Close();
+                this.CloseConnection();
+
+                return tList;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+
+
     }
 
 }

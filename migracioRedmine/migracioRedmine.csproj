@@ -94,6 +94,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Api.cs" />
+    <Compile Include="Attachments.cs" />
+    <Compile Include="TimeEntries.cs" />
+    <Compile Include="Issue.cs" />
     <Compile Include="ReadDB.cs" />
     <Compile Include="Project.cs" />
     <Compile Include="DBconnection.cs" />

@@ -48,5 +48,28 @@ namespace migracioRedmine
             return stringBuilder.ToString().Normalize(NormalizationForm.FormC);
         }
 
+        public static Issue ReadDBIssue(MySqlDataReader dataReader)
+        {
+            Issue issue = new Issue();
+            issue.id = dataReader["id"].ToString();
+            issue.tracker_id = dataReader["tracker_id"].ToString();
+            issue.project_id = dataReader["project_id"].ToString();
+            issue.subject = dataReader["subject"].ToString();
+            issue.description = dataReader["description"].ToString();
+            issue.status_id = dataReader["status_id"].ToString();
+            issue.assigned_to_id = dataReader["assigned_to_id"].ToString();
+            issue.priority_id = dataReader["Priority_id"].ToString();
+            issue.author_id = dataReader["author_id"].ToString();
+            issue.done_ratio = dataReader["done_ratio"].ToString();
+            issue.estimated_hours = dataReader["estimated_hours"].ToString();
+            return issue;
+        }
+
+
+
+
+
+
+
     }
 }
