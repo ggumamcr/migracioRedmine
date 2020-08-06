@@ -65,7 +65,20 @@ namespace migracioRedmine
             return issue;
         }
 
-
+        public static Cost ReadDBCost(MySqlDataReader dataReader)
+        {
+            Cost cost = new Cost();
+            cost.entity_type = "Issue";
+            cost.entity_id = dataReader["issue_id"].ToString();
+            cost.price1 = dataReader["preucost"].ToString();
+            cost.spent_on = dataReader["data"].ToString();
+            cost.name = dataReader["descripcio"].ToString();
+            cost.project_id = dataReader["project_id"].ToString();
+            custom_fields custom_fields = new custom_fields();
+            custom_fields.numalbara = dataReader["numalbara"].ToString();
+            custom_fields.proveidor = dataReader["numalbara"].ToString();
+            return cost;
+        }
 
 
 

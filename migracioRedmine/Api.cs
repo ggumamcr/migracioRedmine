@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using mcrLog;
 
 namespace migracioRedmine
 {
@@ -14,6 +15,7 @@ namespace migracioRedmine
     {
         public static string easyredmine = "https://b3722b455a.fra2.easyredmine.com/";
         public static string key = "? key = b17e9372ec58cd8a17190f83c8084bc9321ca12a";
+
         public static async Task<string> PostProject(Project project, List<Tuple<string, string>> tIds)
         {
             try
@@ -52,6 +54,7 @@ namespace migracioRedmine
             }
             catch (Exception ex)
             {
+                NLog.LogError("Redmine", "Api", "PostProject", ex, project.name);
                 return "error";
             }
         }
@@ -83,6 +86,7 @@ namespace migracioRedmine
             }
             catch (Exception ex)
             {
+                NLog.LogError("Redmine", "Api", "PostIssue", ex, issue.subject);
                 issue.subject = "error" + issue.subject;
                 return issue;
             }
@@ -119,6 +123,7 @@ namespace migracioRedmine
             }
             catch (Exception ex)
             {
+                NLog.LogError("Redmine", "Api", "PostUpload", ex, att.disk_filename);
                 return null;
             }
         }
@@ -143,7 +148,7 @@ namespace migracioRedmine
             }
             catch (Exception ex)
             {
-
+                NLog.LogError("Redmine", "Api", "PostAttach", ex, att.disk_filename);
             }
         }
 
@@ -174,6 +179,7 @@ namespace migracioRedmine
             }
             catch (Exception ex)
             {
+                NLog.LogError("Redmine", "Api", "PostTimeEntry", ex, time.issue_id);
                 return "errorHours";
             }
         }
@@ -181,34 +187,43 @@ namespace migracioRedmine
 
         public static string Obj2Str(object obj)
         {
-            XmlSerializer xs = null;
-            //These are the objects that will free us from extraneous markup.
-            XmlWriterSettings settings = null;
-            XmlSerializerNamespaces ns = null;
-            //We use a XmlWriter instead of a StringWriter.
-            XmlWriter xw = null;
-            String outString = String.Empty;
+            try
+            {
 
-            settings = new XmlWriterSettings();
-            settings.OmitXmlDeclaration = true;
-            //To get rid of the default namespaces we create a new
-            //set of namespaces with one empty entry.
-            ns = new XmlSerializerNamespaces();
-            ns.Add("", "");
+                XmlSerializer xs = null;
+                //These are the objects that will free us from extraneous markup.
+                XmlWriterSettings settings = null;
+                XmlSerializerNamespaces ns = null;
+                //We use a XmlWriter instead of a StringWriter.
+                XmlWriter xw = null;
+                String outString = String.Empty;
 
-            StringBuilder sb = new StringBuilder();
-            xs = new XmlSerializer(obj.GetType());
+                settings = new XmlWriterSettings();
+                settings.OmitXmlDeclaration = true;
+                //To get rid of the default namespaces we create a new
+                //set of namespaces with one empty entry.
+                ns = new XmlSerializerNamespaces();
+                ns.Add("", "");
 
-            //We create a new XmlWriter with the previously created settings 
-            //(to OmitXmlDeclaration).
-            xw = XmlWriter.Create(sb, settings);
-            //We call xs.Serialize and pass in our custom 
-            //XmlSerializerNamespaces object.
-            xs.Serialize(xw, obj, ns);
-            xw.Flush();
+                StringBuilder sb = new StringBuilder();
+                xs = new XmlSerializer(obj.GetType());
 
-            outString = sb.ToString();
-            return outString;
+                //We create a new XmlWriter with the previously created settings 
+                //(to OmitXmlDeclaration).
+                xw = XmlWriter.Create(sb, settings);
+                //We call xs.Serialize and pass in our custom 
+                //XmlSerializerNamespaces object.
+                xs.Serialize(xw, obj, ns);
+                xw.Flush();
+
+                outString = sb.ToString();
+                return outString;
+            }
+            catch(Exception ex)
+            {
+                NLog.LogError("Redmine", "Api", "Obj2Str", ex, obj.ToString());
+                return null;
+            }
         }
     }
 }

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using MySql.Data.MySqlClient;
 using Ubiety.Dns.Core.Records;
+using mcrLog;
+
 
 namespace migracioRedmine
 {
@@ -78,189 +80,235 @@ namespace migracioRedmine
 
         public async System.Threading.Tasks.Task SelectProjectAsync()
         {
-            List<Project> pList = new List<Project>();
-            pList = ListProjects();
-
-            List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
-            TextWriter tw = new StreamWriter("projects.txt");
-            foreach (Project oprg in pList)
+            try
             {
-                Tuple<string, string> ids = new Tuple<string, string>(oprg.id, await Api.PostProject(oprg, tIds));
-                tIds.Add(ids);
-                tw.WriteLine(ids.Item1 + " " + ids.Item2);
-                if (ids.Item2 != "error")
+
+                List<Project> pList = new List<Project>();
+                pList = ListProjects();
+
+                List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+                TextWriter tw = new StreamWriter("projects.txt");
+                foreach (Project oprg in pList)
                 {
-                    InsertIdProject(ids.Item2, ids.Item1);
+                    Tuple<string, string> ids = new Tuple<string, string>(oprg.id, await Api.PostProject(oprg, tIds));
+                    tIds.Add(ids);
+                    tw.WriteLine(ids.Item1 + " " + ids.Item2);
+                    if (ids.Item2 != "error")
+                    {
+                        InsertIdProject(ids.Item2, ids.Item1);
+                    }
                 }
+                tw.Close();
+                MessageBox.Show("ProjectsCreated");
             }
-            tw.Close();
-            MessageBox.Show("ProjectsCreated");
+            catch(Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "SelectProjectAsync", ex);
+            }
 
         }
         public async System.Threading.Tasks.Task SelectIssueAsync()
         {
-            List<Project> pList = new List<Project>();
-            pList = ListProjects();
-
-            List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
-            TextWriter tw = new StreamWriter("Issues.txt");
-            foreach (Project oprg in pList)
+            try
             {
-                Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
-                tIds.Add(ids);
-                List<Issue> iList = new List<Issue>();
-                iList = ListIssue(ids.Item1, ids.Item2);
-                tw.WriteLine(ids.Item1 + " " + ids.Item2);
 
-                foreach (Issue i in iList)
+                List<Project> pList = new List<Project>();
+                pList = ListProjects();
+
+                List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+                TextWriter tw = new StreamWriter("Issues.txt");
+                foreach (Project oprg in pList)
                 {
-                    List<Attachments> aList = new List<Attachments>();
-                    aList = SelectAttachments(i.id);
+                    Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
+                    tIds.Add(ids);
+                    List<Issue> iList = new List<Issue>();
+                    iList = ListIssue(ids.Item1, ids.Item2);
+                    tw.WriteLine(ids.Item1 + " " + ids.Item2);
 
-                    if (aList != null)
+                    foreach (Issue i in iList)
                     {
-                        int index = 0;
-                        uploads uploads = new uploads();
-                        uploads.type = "array";
-                        uploads.upload = new upload[aList.Count];
-                        foreach (Attachments a in aList)
-                        {
-                            AttachToken token = await Api.PostUpload(a);
-                            upload upload = new upload();
-                            upload.token = token.token;
-                            upload.filename = a.filename;
-                            upload.content_type = a.content_type;
-                            uploads.upload[index] = upload;
-                            i.uploads = uploads;
-                            index++;
-                        }
-                    }
-                    Issue returned = await Api.PostIssue(i);
-                    InsertIdIssue(returned.id, i.id);
-                    tw.WriteLine("   " + returned.subject);
-                }
-            }
+                        List<Attachments> aList = new List<Attachments>();
+                        aList = SelectAttachments(i.id);
 
-            MessageBox.Show("Issue Done");
+                        if (aList != null)
+                        {
+                            int index = 0;
+                            uploads uploads = new uploads();
+                            uploads.type = "array";
+                            uploads.upload = new upload[aList.Count];
+                            foreach (Attachments a in aList)
+                            {
+                                AttachToken token = await Api.PostUpload(a);
+                                upload upload = new upload();
+                                upload.token = token.token;
+                                upload.filename = a.filename;
+                                upload.content_type = a.content_type;
+                                uploads.upload[index] = upload;
+                                i.uploads = uploads;
+                                index++;
+                            }
+                        }
+                        Issue returned = await Api.PostIssue(i);
+                        InsertIdIssue(returned.id, i.id);
+                        tw.WriteLine("   " + returned.subject);
+                    }
+                }
+
+                MessageBox.Show("Issue Done");
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "SelectIssueAsync", ex);
+            }
         }
 
         public async System.Threading.Tasks.Task SelectTimeAsync()
         {
-            List<Project> pList = new List<Project>();
-            pList = ListProjects();
-
-            List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
-            TextWriter tw = new StreamWriter("Time.txt");
-            foreach (Project oprg in pList)
+            try
             {
-                Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
-                tIds.Add(ids);
-                List<Issue> iList = new List<Issue>();
-                iList = ListIssue(ids.Item1, ids.Item2);
-                tw.WriteLine(ids.Item1 + " " + ids.Item2);
 
-                foreach (Issue i in iList)
+                List<Project> pList = new List<Project>();
+                pList = ListProjects();
+
+                List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+                TextWriter tw = new StreamWriter("Time.txt");
+                foreach (Project oprg in pList)
                 {
-                    tw.WriteLine("   " + i.subject);
+                    Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
+                    tIds.Add(ids);
+                    List<Issue> iList = new List<Issue>();
+                    iList = ListIssue(ids.Item1, ids.Item2);
+                    tw.WriteLine(ids.Item1 + " " + ids.Item2);
 
-                    List<TimeEntries> tList = new List<TimeEntries>();
-                    tList = ListTimeEntries(i.id, ListIdIssue(i.id), i.project_id);
-
-                    foreach (TimeEntries Time in tList)
+                    foreach (Issue i in iList)
                     {
-                        string returnedTime = await Api.PostTimeEntry(Time);
-                        tw.WriteLine("        " + returnedTime);
+                        tw.WriteLine("   " + i.subject);
+
+                        List<TimeEntries> tList = new List<TimeEntries>();
+                        tList = ListTimeEntries(i.id, ListIdIssue(i.id), i.project_id);
+
+                        foreach (TimeEntries Time in tList)
+                        {
+                            string returnedTime = await Api.PostTimeEntry(Time);
+                            tw.WriteLine("        " + returnedTime);
+                        }
                     }
                 }
+
+                MessageBox.Show("Done");
             }
-
-            MessageBox.Show("Done");
-
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "SelectTimeAsync", ex);
+            }
         }
 
         public bool InsertIdProject(string new_id, string old_id)
         {
-            string query = "update projects set default_assigned_to_id = " + new_id + " where id = " + old_id;
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
+                string query = "update projects set default_assigned_to_id = " + new_id + " where id = " + old_id;
+                if (this.OpenConnection() == true)
+                {
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
 
-                cmd.ExecuteNonQuery();
-                this.CloseConnection();
-                return true;
+                    cmd.ExecuteNonQuery();
+                    this.CloseConnection();
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "InsertIdProject", ex);
                 return false;
             }
-
         }
 
         public List<Project> ListProjects()
         {
-            string query = "SELECT * FROM projects WHERE id<120";
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
+                string query = "SELECT * FROM projects WHERE id<120";
 
-                List<Project> pList = new List<Project>();
-                //Public lstReadOF_BBDD As New List(Of CLSLinFormulaDB)
-
-                //Read the data and store them in the list
-                while (dataReader.Read())
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    Project project = new Project();
-                    project = ReadDB.ReadDBProject(dataReader);
-                    if (project.id != null)
-                    {
-                        pList.Add(project);
-                    }
-                    else
-                    {
-                        bool note = false;
-                    }
-                }
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
 
-                dataReader.Close();
-                this.CloseConnection();
-                return pList;
+                    List<Project> pList = new List<Project>();
+                    //Public lstReadOF_BBDD As New List(Of CLSLinFormulaDB)
+
+                    //Read the data and store them in the list
+                    while (dataReader.Read())
+                    {
+                        Project project = new Project();
+                        project = ReadDB.ReadDBProject(dataReader);
+                        if (project.id != null)
+                        {
+                            pList.Add(project);
+                        }
+                        else
+                        {
+                            bool note = false;
+                        }
+                    }
+
+                    dataReader.Close();
+                    this.CloseConnection();
+                    return pList;
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "ListProjects", ex);
                 return null;
             }
         }
         public string ListIdProjects(string id)
         {
-            string query = "SELECT * FROM projects WHERE id="+id;
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
-                //Read the data and store them in the list
-                string new_id = null;
-                while (dataReader.Read())
+                string query = "SELECT * FROM projects WHERE id=" + id;
+
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    new_id = dataReader["default_assigned_to_id"].ToString();
-                }
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+                    //Read the data and store them in the list
+                    string new_id = null;
+                    while (dataReader.Read())
+                    {
+                        new_id = dataReader["default_assigned_to_id"].ToString();
+                    }
 
-                dataReader.Close();
-                this.CloseConnection();
-                return new_id;
+                    dataReader.Close();
+                    this.CloseConnection();
+                    return new_id;
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "ListIdProjects", ex);
                 return null;
             }
         }
@@ -268,170 +316,210 @@ namespace migracioRedmine
 
         public List<Issue> ListIssue(string id, string new_id)
         {
-            string query = "SELECT * FROM issues WHERE project_id=" + id;
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
+                string query = "SELECT * FROM issues WHERE project_id=" + id;
 
-                List<Issue> iList = new List<Issue>();
-                //Read the data and store them in the list
-                while (dataReader.Read())
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    Issue issue = new Issue();
-                    issue = ReadDB.ReadDBIssue(dataReader);
-                    issue.project_id = new_id;
-                    issue.priority_id = "12";
-                    issue.author_id = "5";
-                    if (issue != null)
-                    {
-                        iList.Add(issue);
-                    }
-                }
-                dataReader.Close();
-                this.CloseConnection();
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
 
-                return iList;
+                    List<Issue> iList = new List<Issue>();
+                    //Read the data and store them in the list
+                    while (dataReader.Read())
+                    {
+                        Issue issue = new Issue();
+                        issue = ReadDB.ReadDBIssue(dataReader);
+                        issue.project_id = new_id;
+                        issue.priority_id = "12";
+                        issue.author_id = "5";
+                        if (issue != null)
+                        {
+                            iList.Add(issue);
+                        }
+                    }
+                    dataReader.Close();
+                    this.CloseConnection();
+
+                    return iList;
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "ListIssue", ex);
                 return null;
             }
 
         }
         public bool InsertIdIssue(string new_id, string old_id)
         {
-            string query = "update issues set fixed_version_id = " + new_id + " where id = " + old_id;
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
+                string query = "update issues set fixed_version_id = " + new_id + " where id = " + old_id;
+                if (this.OpenConnection() == true)
+                {
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
 
-                cmd.ExecuteNonQuery();
-                this.CloseConnection();
-                return true;
+                    cmd.ExecuteNonQuery();
+                    this.CloseConnection();
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "InsertIdIssue", ex);
                 return false;
             }
 
         }
         public string ListIdIssue(string id)
         {
-            string query = "SELECT * FROM issues WHERE id=" + id;
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
-                //Read the data and store them in the list
-                string new_id = null;
-                while (dataReader.Read())
+                string query = "SELECT * FROM issues WHERE id=" + id;
+
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    new_id = dataReader["fixed_version_id"].ToString();
-                }
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+                    //Read the data and store them in the list
+                    string new_id = null;
+                    while (dataReader.Read())
+                    {
+                        new_id = dataReader["fixed_version_id"].ToString();
+                    }
 
-                dataReader.Close();
-                this.CloseConnection();
-                return new_id;
+                    dataReader.Close();
+                    this.CloseConnection();
+                    return new_id;
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return null;
+                NLog.LogError("Redmine", "DBconnection", "ListIdIssue", ex);
+                return "";
             }
         }
 
         public List<Attachments> SelectAttachments(string issue_id)
         {
-            string query = "SELECT * FROM attachments WHERE container_type='Issue' and container_id=" + issue_id;
-
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
-                List<Attachments> file = new List<Attachments>();
-                //Read the data and store them in the list
-                while (dataReader.Read())
+                string query = "SELECT * FROM attachments WHERE container_type='Issue' and container_id=" + issue_id;
+
+
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    Attachments att = new Attachments();
-                    att.id = dataReader["id"].ToString();
-                    att.container_id = dataReader["container_id"].ToString();
-                    att.container_type = dataReader["container_type"].ToString();
-                    att.filename = dataReader["filename"].ToString();
-                    att.disk_filename = dataReader["disk_filename"].ToString();
-                    att.filesize = dataReader["filesize"].ToString();
-                    att.content_type = dataReader["content_type"].ToString();
-                    att.digest = dataReader["digest"].ToString();
-                    att.downloads = dataReader["downloads"].ToString();
-                    att.author_id = dataReader["author_id"].ToString();
-                    att.created_on = dataReader["created_on"].ToString();
-                    att.description = dataReader["description"].ToString();
-                    att.disk_directory = dataReader["disk_directory"].ToString();
-
-                    if (att != null)
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+                    List<Attachments> file = new List<Attachments>();
+                    //Read the data and store them in the list
+                    while (dataReader.Read())
                     {
-                        file.Add(att);
+                        Attachments att = new Attachments();
+                        att.id = dataReader["id"].ToString();
+                        att.container_id = dataReader["container_id"].ToString();
+                        att.container_type = dataReader["container_type"].ToString();
+                        att.filename = dataReader["filename"].ToString();
+                        att.disk_filename = dataReader["disk_filename"].ToString();
+                        att.filesize = dataReader["filesize"].ToString();
+                        att.content_type = dataReader["content_type"].ToString();
+                        att.digest = dataReader["digest"].ToString();
+                        att.downloads = dataReader["downloads"].ToString();
+                        att.author_id = dataReader["author_id"].ToString();
+                        att.created_on = dataReader["created_on"].ToString();
+                        att.description = dataReader["description"].ToString();
+                        att.disk_directory = dataReader["disk_directory"].ToString();
+
+                        if (att != null)
+                        {
+                            file.Add(att);
+                        }
                     }
+
+                    //close Data Reader
+                    dataReader.Close();
+
+                    //close Connection
+                    this.CloseConnection();
+
+                    //return list to be displayed
+                    return file;
                 }
-
-                //close Data Reader
-                dataReader.Close();
-
-                //close Connection
-                this.CloseConnection();
-
-                //return list to be displayed
-                return file;
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "SelectAttachments", ex);
                 return null;
             }
         }
 
         public List<TimeEntries> ListTimeEntries(string issue_id, string new_id, string project_id)
         {
-            string query = "SELECT * FROM time_entries WHERE issue_id=" + issue_id;
-
-            //Open connection
-            if (this.OpenConnection() == true)
+            try
             {
-                //Create Command
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
-                MySqlDataReader dataReader = cmd.ExecuteReader();
-                List<TimeEntries> tList = new List<TimeEntries>();
+                string query = "SELECT * FROM time_entries WHERE issue_id=" + issue_id;
 
-                while (dataReader.Read())
+                //Open connection
+                if (this.OpenConnection() == true)
                 {
-                    TimeEntries tEntry = new TimeEntries();
-                    tEntry.hours = dataReader["hours"].ToString();                 
-                    tEntry.issue_id = new_id;
-                    if (tEntry != null)
-                    {
-                        tList.Add(tEntry);
-                    }
-                }
-                dataReader.Close();
-                this.CloseConnection();
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+                    List<TimeEntries> tList = new List<TimeEntries>();
 
-                return tList;
+                    while (dataReader.Read())
+                    {
+                        TimeEntries tEntry = new TimeEntries();
+                        tEntry.hours = dataReader["hours"].ToString();
+                        tEntry.issue_id = new_id;
+                        if (tEntry != null)
+                        {
+                            tList.Add(tEntry);
+                        }
+                    }
+                    dataReader.Close();
+                    this.CloseConnection();
+
+                    return tList;
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception ex)
             {
+                NLog.LogError("Redmine", "DBconnection", "ListTimeEntries", ex);
                 return null;
             }
         }

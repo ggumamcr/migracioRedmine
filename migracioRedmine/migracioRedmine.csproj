@@ -95,6 +95,7 @@
   <ItemGroup>
     <Compile Include="Api.cs" />
     <Compile Include="Attachments.cs" />
+    <Compile Include="Cost.cs" />
     <Compile Include="TimeEntries.cs" />
     <Compile Include="Issue.cs" />
     <Compile Include="ReadDB.cs" />
@@ -133,6 +134,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\mcrLog\mcrLog.vbproj">
+      <Project>{4b4dc8a7-3f9d-4248-bd7c-0dc947053e57}</Project>
+      <Name>mcrLog</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
