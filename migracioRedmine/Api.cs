@@ -10,13 +10,15 @@ using System.Xml.Serialization;
 
 namespace migracioRedmine
 {
-    class Api
+    class Api 
     {
+        public static string easyredmine = "https://b3722b455a.fra2.easyredmine.com/";
+        public static string key = "? key = b17e9372ec58cd8a17190f83c8084bc9321ca12a";
         public static async Task<string> PostProject(Project project, List<Tuple<string, string>> tIds)
         {
             try
             {
-                var baseAddress = new Uri("https://b3722b455a.fra2.easyredmine.com/");
+                var baseAddress = new Uri(easyredmine);
                 using (var httpClient = new HttpClient { BaseAddress = baseAddress })
                 {
                     if (project.parent_id != null)
@@ -33,7 +35,7 @@ namespace migracioRedmine
                     outString = Obj2Str(project);
                     using (var content = new StringContent(outString, Encoding.UTF8, "application/xml"))
                     {
-                        var response = await httpClient.PostAsync("projects.xml?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a", content);
+                        var response = await httpClient.PostAsync("projects.xml" + key, content);
                         if (!response.IsSuccessStatusCode)
                         {
                             bool rety = response.IsSuccessStatusCode;
@@ -59,13 +61,13 @@ namespace migracioRedmine
             String outString = String.Empty;
             try
             {
-                var baseAddress = new Uri("https://b3722b455a.fra2.easyredmine.com/");
+                var baseAddress = new Uri(easyredmine);
                 using (var httpClient = new HttpClient { BaseAddress = baseAddress })
                 {
                     outString = Obj2Str(issue);
                     using (var content = new StringContent(outString, Encoding.UTF8, "application/xml"))
                     {
-                        var response = await httpClient.PostAsync("issues.xml?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a", content);
+                        var response = await httpClient.PostAsync("issues.xml"+key, content);
                         if (!response.IsSuccessStatusCode)
                         {
                             bool rety = response.IsSuccessStatusCode;
@@ -91,7 +93,7 @@ namespace migracioRedmine
             String outString = String.Empty;
             try
             {
-                var baseAddress = new Uri("https://b3722b455a.fra2.easyredmine.com/");
+                var baseAddress = new Uri(easyredmine);
                 string folder = att.disk_directory.Replace('/', '\\');
                 string filepath = @"C:\Users\gguma\Documents\files\" + folder + @"\" + att.disk_filename;
 
@@ -103,7 +105,7 @@ namespace migracioRedmine
                     using (var content = new StringContent(text, System.Text.Encoding.Default, "application/octet-stream"))
 
                     {
-                        using (var response = await httpClient.PostAsync("uploads.xml?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a", content))
+                        using (var response = await httpClient.PostAsync("uploads.xml"+key, content))
                         {
                             string responseData = await response.Content.ReadAsStringAsync();
                             AttachToken token = new AttachToken();
@@ -125,13 +127,13 @@ namespace migracioRedmine
             String outString = String.Empty;
             try
             {
-                var baseAddress = new Uri("https://b3722b455a.fra2.easyredmine.com/");
+                var baseAddress = new Uri(easyredmine);
 
                 using (var httpClient = new HttpClient { BaseAddress = baseAddress })
                 {
                     using (var content = new StringContent("<attach><entity_type>" + att.container_type + "</entity_type><entity_id>" + id + "</entity_id ><attachments type='array'><attachment><token>" + token.token + "</token></attachment></attachments></attach>", System.Text.Encoding.Default, "application/octet-stream"))
                     {
-                        using (var response = await httpClient.PostAsync("attach.xml?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a", content))
+                        using (var response = await httpClient.PostAsync("attach.xml"+key, content))
                         {
                             string responseData = await response.Content.ReadAsStringAsync();
 
@@ -150,13 +152,13 @@ namespace migracioRedmine
             String outString = String.Empty;
             try
             {
-                var baseAddress = new Uri("https://b3722b455a.fra2.easyredmine.com/");
+                var baseAddress = new Uri(easyredmine);
                 using (var httpClient = new HttpClient { BaseAddress = baseAddress })
                 {
                     outString = Obj2Str(time);
                     using (var content = new StringContent(outString, Encoding.UTF8, "application/xml"))
                     {
-                        var response = await httpClient.PostAsync("time_entries.xml?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a", content);
+                        var response = await httpClient.PostAsync("time_entries.xml"+key, content);
                         if (!response.IsSuccessStatusCode)
                         {
                             bool rety = response.IsSuccessStatusCode;
