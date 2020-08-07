@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using MySql.Data.MySqlClient;
 using Ubiety.Dns.Core.Records;
 using mcrLog;
-
+using K4os.Compression.LZ4.Internal;
 
 namespace migracioRedmine
 {
@@ -19,6 +19,7 @@ namespace migracioRedmine
         private string database;
         private string uid;
         private string password;
+        public string[] users;
 
         //Constructor
         public DBconnection()
@@ -234,7 +235,7 @@ namespace migracioRedmine
         {
             try
             {
-                string query = "SELECT * FROM projects WHERE id<120";
+                string query = "SELECT * FROM projects WHERE id<80";
 
                 //Open connection
                 if (this.OpenConnection() == true)
@@ -524,6 +525,211 @@ namespace migracioRedmine
             }
         }
 
+        public async Task<string[]> ListUsersAsync()
+        {
+            try
+            {
+                users = new string[26];
+
+                for (int i = 0; i < 26; i++)
+                {
+                    string name = null;
+                    string query = "SELECT * FROM users WHERE id=" + i;
+                    if (this.OpenConnection() == true)
+                    {
+                        MySqlCommand cmd = new MySqlCommand(query, connection);
+                        MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                        while (dataReader.Read())
+                        {
+                            name = dataReader["firstname"].ToString();
+                        }
+                        dataReader.Close();
+                        this.CloseConnection();
+                        if (name != null && name != "")
+                        {
+                            users[i] = await Api.User(name);
+                        }
+                    }
+                }
+                MessageBox.Show("Users Done");
+                return users;
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "ListUsers", ex);
+                return null;
+            }
+        }
+
+        public async System.Threading.Tasks.Task SelectMembershipsAsync()
+        {
+            try
+            {
+
+                List<Project> pList = new List<Project>();
+                pList = ListProjects();
+
+                List<Tuple<string, string>> tIds = new List<Tuple<string, string>>();
+                TextWriter tw = new StreamWriter("Memberships.txt");
+                foreach (Project oprg in pList)
+                {
+                    Tuple<string, string> ids = new Tuple<string, string>(oprg.id, ListIdProjects(oprg.id));
+                    tIds.Add(ids);
+                    List<Memberships> mList = new List<Memberships>();
+                    mList = ListRoles(ids.Item1, ListMemberships(ids.Item1, ids.Item2));
+                    tw.WriteLine(ids.Item1 + " " + ids.Item2);
+
+                    foreach (Memberships i in mList)
+                    {
+                        await Api.PostProjectMembership(i);
+                    }
+                }
+
+                MessageBox.Show("Memberships Done");
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "SelectMembershipsAsync", ex);
+            }
+        }
+
+        public List<Memberships> ListMemberships(string project_id, string new_id)
+        {
+            try
+            {
+                string query = "SELECT * FROM members WHERE project_id=" + project_id;
+
+                //Open connection
+                if (this.OpenConnection() == true)
+                {
+                    //Create Command
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    //Create a data reader and Execute the command
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+                    List<Memberships> mList = new List<Memberships>();
+
+                    while (dataReader.Read())
+                    {
+                        Memberships Member = new Memberships();
+                        Member.member_id = dataReader["id"].ToString();
+                        Member.project_id = new_id;
+                        Member.user_id = dataReader["user_id"].ToString();
+                        Member.user_id = users[int.Parse(Member.user_id)];
+                        if (Member != null)
+                        {
+                            mList.Add(Member);
+                        }
+                    }
+                    dataReader.Close();
+                    this.CloseConnection();
+
+
+                    return mList;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "ListMemberships", ex);
+                return null;
+            }
+        }
+        public List<Memberships> ListRoles(string project_id, List<Memberships> mList)
+        {
+            try
+            {
+                List<Memberships> totalList = new List<Memberships>();
+                foreach (Memberships m in mList)
+                {
+                    string query = "SELECT * FROM member_roles WHERE member_id=" + m.member_id;
+
+                    //Open connection
+                    if (this.OpenConnection() == true)
+                    {
+                        //Create Command
+                        MySqlCommand cmd = new MySqlCommand(query, connection);
+                        //Create a data reader and Execute the command
+                        MySqlDataReader dataReader = cmd.ExecuteReader();
+                        Memberships Member = m;
+                        role Role = new role();
+                        while (dataReader.Read())
+                        {
+                            string role = dataReader["role_id"].ToString();
+                            if(role.Equals("7")||role.Equals("6"))
+                            {
+                                role = "11";
+                            }
+                            Role.role_id = getRole(Role.role_id, role);
+
+                        }
+                        Role.type = "array";
+                        Member.role_ids = Role;
+                        totalList.Add(Member);
+                        dataReader.Close();
+                        this.CloseConnection();
+
+                    }
+                }
+                return totalList;
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "ListRoles", ex);
+                return null;
+            }
+        }
+
+        public string getRole(string old, string newrole)
+        {
+            try
+            {
+                string role;
+                if (old == null)
+                {
+                    role = newrole; //cap rol
+                }
+                else if (newrole.Equals("11"))
+                {
+                    role = newrole;
+                }
+                else if (newrole.Equals("3"))
+                {
+                    if (old.Equals("11"))
+                    {
+                        role = old;
+                    }
+                    else
+                    {
+                        role = newrole;
+                    }
+                }
+                else if (newrole.Equals("4"))
+                {
+                    if (old.Equals("11") || old.Equals("3"))
+                    {
+                        role = old;
+                    }
+                    else
+                    {
+                        role = newrole;
+                    }
+                }
+                else
+                {
+                    role = "4";
+                }
+                return role;
+            }
+            catch(Exception ex)
+            {
+                NLog.LogError("Redmine", "DBconnection", "getRole", ex);
+                return "4";
+            }
+        }
 
 
     }

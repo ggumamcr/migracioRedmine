@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -14,7 +15,7 @@ namespace migracioRedmine
     class Api 
     {
         public static string easyredmine = "https://b3722b455a.fra2.easyredmine.com/";
-        public static string key = "? key = b17e9372ec58cd8a17190f83c8084bc9321ca12a";
+        public static string key = "?key=b17e9372ec58cd8a17190f83c8084bc9321ca12a";
 
         public static async Task<string> PostProject(Project project, List<Tuple<string, string>> tIds)
         {
@@ -184,6 +185,64 @@ namespace migracioRedmine
             }
         }
 
+        public static async Task<string> User(string name)
+        {
+            String outString = String.Empty;
+            try
+            {
+                var baseAddress = new Uri(easyredmine);
+                using (var httpClient = new HttpClient { BaseAddress = baseAddress })
+                {
+                    using (var content = new StringContent(outString, Encoding.UTF8, "application/xml"))
+                    {
+                        var response = await httpClient.GetAsync("users.xml"+key+"&name="+name);
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            bool rety = response.IsSuccessStatusCode;
+                        }
+                        string responseData = await response.Content.ReadAsStringAsync();
+                        Users users = new Users();
+                        XmlSerializer serializer = new XmlSerializer(users.GetType());
+                        StringReader rdr = new StringReader(responseData);
+                        Users resultingMessage = (Users)serializer.Deserialize(rdr);
+                        return resultingMessage.User.id;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "Api", "User", ex, name);
+                return null;
+            }
+        }
+        public static async Task<string> PostProjectMembership(Memberships member)
+        {
+            String outString = String.Empty;
+            try
+            {
+                var baseAddress = new Uri(easyredmine);
+                using (var httpClient = new HttpClient { BaseAddress = baseAddress })
+                {
+                    outString = Obj2Str(member);
+                    using (var content = new StringContent(outString, Encoding.UTF8, "application/xml"))
+                    {
+                        var response = await httpClient.PostAsync("projects/" +member.project_id+"/memberships.xml" + key, content);
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            bool rety = response.IsSuccessStatusCode;
+                        }
+                        string responseData = await response.Content.ReadAsStringAsync();
+
+                        return responseData;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                NLog.LogError("Redmine", "Api", "PostProjectMembership", ex, member.member_id);
+                return null;
+            }
+        }
 
         public static string Obj2Str(object obj)
         {

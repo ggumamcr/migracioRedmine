@@ -33,5 +33,18 @@ namespace migracioRedmine
         {
             dbConnect.SelectTimeAsync();
         }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+
+            dbConnect.ListUsersAsync();
+
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            dbConnect.SelectMembershipsAsync();
+        }
+
     }
 }
